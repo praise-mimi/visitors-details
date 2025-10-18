@@ -1,0 +1,69 @@
+from datetime import datetime, timedelta
+
+# Custom Exceptions
+class DuplicateVisitorError(Exception):
+    pass
+
+class TimeRestrictedVisitorError(Exception):
+    pass
+
+# Get last visitor info from file
+def get_last_visitor(file_path):
+    try:
+        with open(file_path, 'r') as file:
+            lines = file.readlines()
+            if lines:
+                last_line = lines[-1].strip()
+                last_name, last_time_str = last_line.split(" - ")
+                last_time = datetime.strptime(last_time_str, "%Y-%m-%d %H:%M:%S")
+                return last_name, last_time
+    except FileNotFoundError:
+        return None, None
+    except Exception as e:
+        print(f"⚠️ Error reading file: {e}")
+    return None, None
+
+# Add new visitor
+def add_visitor(file_path, name):
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with open(file_path, 'a') as file:
+            file.write(f"{name} - {timestamp}\n")
+        print(f"✅ Visitor '{name}' added at {timestamp}")
+    except Exception as e:
+        print(f"⚠️ Error writing to file: {e}")
+
+# Main program logic
+def main():
+    file_path = "visitors.txt"
+    name = input("Enter your name: ").strip().title()
+
+    last_name, last_time = get_last_visitor(file_path)
+
+    try:
+        # Rule 1: Duplicate visitor check
+        if name == last_name:
+            raise DuplicateVisitorError(f"{name} is already the last visitor.")
+
+        # Rule 2: Enforce 5-minute wait between any two visitors
+        if last_time:
+            time_diff = datetime.now() - last_time
+            if time_diff < timedelta(minutes=5):
+                minutes_left = 5 - int(time_diff.total_seconds() // 60)
+                raise TimeRestrictedVisitorError(
+                    f"Please wait {minutes_left} more minute(s) before next visitor is allowed."
+                )
+
+        # Add visitor if checks pass
+        add_visitor(file_path, name)
+
+    except DuplicateVisitorError as e:
+        print(f"🚫 DuplicateVisitorError: {e}")
+    except TimeRestrictedVisitorError as e:
+        print(f"🚫 TimeRestrictedVisitorError: {e}")
+    except Exception as e:
+        print(f"⚠️ An unexpected error occurred: {e}")
+
+# Run the program
+if __name__ == "__main__":
+    main()
